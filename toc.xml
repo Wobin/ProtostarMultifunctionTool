@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Addon Author="Wobin" APIVersion="8" Name="ProtostarMultifunctionTool" Description="Helps swap to the appropriate gathering tool for the job">
+    <Script Name="Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua"/>
+    <Script Name="Libs\GeminiAddon-1.0\GeminiAddon.lua"/>
+	<Script Name="Libs\GeminiGUI-1.0\GeminiGUI.lua"/>
+	<Script Name="Libs\GeminiHook-1.0\GeminiHook-1.0.lua"/>
+	<Script Name="Libs\GeminiEvent-1.0\GeminiEvent-1.0.lua"/>
+    <Script Name="ProtostarMultifunctionTool.lua"/>
+    <Form Name="ProtostarMultifunctionTool.xml"/>
+</Addon>
