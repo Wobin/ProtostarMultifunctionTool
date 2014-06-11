@@ -1,6 +1,13 @@
 -----------------------------------------------------------------------------------------------
 -- Client Lua Script for ProtostarMultifunctionTool
--- Copyright (c) NCsoft. All rights reserved
+-- Copyright (c) Wobin. All rights reserved
+--
+--
+-- Then Amnon hated her exceedingly; so that the first time a thunk is forced, we will turn it 
+-- into an evaluated thunk
+--             A reading from the Book of Markov - Chapter 30 Verses 5-14 
+--                      Structure and Interpretation of Computer Programs - King James Version
+--                                                                  http://tinyurl.com/p8vb3me
 -----------------------------------------------------------------------------------------------
  
 require "Window"
