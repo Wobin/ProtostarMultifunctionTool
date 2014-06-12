@@ -57,7 +57,7 @@ local GatheringTypes = {
 -----------------------------------------------------------------------------------------------
 
 PSTool = Apollo.GetPackage("Gemini:Addon-1.1").tPackage:NewAddon("Protostar Multifunction Tool", 
-											false, {"Gemini:GUI-1.0"}, "Gemini:Hook-1.0", "Gemini:Event-1.0", "Gemini:Timer-1.0") 
+											false, {}, "Gemini:Hook-1.0", "Gemini:Event-1.0", "Gemini:Timer-1.0") 
 local GeminiGUI, glog, LibSort, bag, bagWindow 
 
 function PSTool:OnInitialize()
