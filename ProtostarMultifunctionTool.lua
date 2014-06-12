@@ -34,12 +34,13 @@ require "Window"
                             SwallowMouseClicks = true, 
                             IgnoreTooltipDelay = true, 
                             NewQuestOverlaySprite = "BK3:UI_BK3_Holo_Framing_3_Blocker", 
-                            Name = "ToEquipBag", 
+                            Name = "GatheringTool", 
                             Overlapped = true, 
                             IgnoreMouse = true, 
                             Picture = true, 
                             Events = {
-                                GenerateTooltip = "OnGenerateTooltip",
+                             --   GenerateTooltip = "OnGenerateTooltip",           
+                                MouseButtonUp = "MouseUpClear"                   
                             },
                         },
                     },
@@ -47,7 +48,7 @@ require "Window"
 
 local GatheringTypes = {
 	[116] = "Survivalist",
-	[117] = "Relic",
+	[117] = "Relic Hunter",
 	[106] = "Mining"
 }
 
@@ -56,10 +57,8 @@ local GatheringTypes = {
 -----------------------------------------------------------------------------------------------
 
 PSTool = Apollo.GetPackage("Gemini:Addon-1.1").tPackage:NewAddon("Protostar Multifunction Tool", 
-											false, {"Gemini:GUI-1.0"}, "Gemini:Hook-1.0", "Gemini:Event-1.0") 
-local GeminiGUI 
-local glog 
-local player 
+											false, {"Gemini:GUI-1.0"}, "Gemini:Hook-1.0", "Gemini:Event-1.0", "Gemini:Timer-1.0") 
+local GeminiGUI, glog, LibSort, bag, bagWindow 
 
 function PSTool:OnInitialize()
 	GeminiGUI = Apollo.GetPackage("Gemini:GUI-1.0").tPackage
@@ -74,8 +73,44 @@ function PSTool:OnInitialize()
         appender = "GeminiConsole"
   	})
 
+	LibSort = Apollo.GetPackage("Wob:LibSort-1.0").tPackage
+	
+	self.LibSort = LibSort
+
+	LibSort:Register("PSMFT - Survivalist", "Category", "Sort by Specific Survivalist Category", "SurvivalistCategory", function(...) return PSTool:SortCategory(116, ...) end)
+	LibSort:Register("PSMFT - Survivalist", "Level", "Sort by Level", "Level", function(...) return PSTool:SortLevel(...) end)
+	LibSort:Register("PSMFT - Relic Hunter", "Category", "Sort by Specific Relic Hunter Category", "RelicHunterCategory", function(...) return PSTool:SortCategory(117, ...) end)
+	LibSort:Register("PSMFT - Relic Hunter", "Level", "Sort by Level", "Level", function(...) return PSTool:SortLevel(...) end)
+	LibSort:Register("PSMFT - Mining", "Category", "Sort by Specific Mining Category", "MiningCategory", function(...) return PSTool:SortCategory(106, ...) end)
+	LibSort:Register("PSMFT - Mining", "Level", "Sort by Level", "Level", function(...) return PSTool:SortLevel(...) end)
 end
  
+function PSTool:SortCategory(cat, a, b)
+	local catA, catB = a:GetItemCategory(), b:GetItemCategory()
+	
+	if catA == catB then return 0 end
+	if catA == cat then return -1 end
+	if catB == cat then return 1 end
+	return 0
+end
+
+function PSTool:SortLevel(a, b)	
+	local la, lb = a:GetRequiredLevel(), b:GetRequiredLevel()
+	if la == lb then return 0 end
+	if la < lb then return -1 end
+	return 1
+end
+--[[
+function PSTool:OnGenerateTooltip(wndControl, wndHandler, tType, item)
+	if wndControl ~= wndHandler then return end
+	wndControl:SetTooltipDoc(nil)
+	if item ~= nil then
+		local itemEquipped = item:GetEquippedItemForItemType()
+		Tooltip.GetItemTooltipForm(self, wndControl, item, {bPrimary = true, bSelling = false, itemCompare = itemEquipped})
+	end
+end
+--]]
+
 local lastX, lastY 
 
 function PSTool:MouseDown(name, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation)
@@ -84,11 +119,33 @@ function PSTool:MouseDown(name, eMouseButton, nLastRelativeMouseX, nLastRelative
 	lastY = nLastRelativeMouseY
 end
 
-function PSTool:TargetChanged(name, unit)	
-	if not unit:CanBeHarvestedBy(player) then return end
+function PSTool:MouseUpClear(wndControl, wndHandler, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation)
+	if eMouseButton == 1 then
+		bag:Show(false)
+	end
+end
+
+function PSTool:TargetChanged(name, unit)
+	if bag:IsShown() then bag:Show(false) end
+	if not unit then return end
+	if not unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()) then return end
 	local harvestType, harvestLevel = unit:GetHarvestRequiredTradeskillName(), unit:GetHarvestRequiredTradeskillTier()
-	local tool = self:GetEquippedTool(player:GetEquippedItems())
-	glog:debug("tool is " .. tool)
+	local tool = self:GetEquippedTool(GameLib.GetPlayerUnit():GetEquippedItems())
+	if not tool or GatheringTypes[tool:GetItemCategory()] ~= harvestType then
+		-- Lets get the correct tool for the job
+		bagWindow:SetSort(true)
+		bagWindow:SetItemSortComparer(function(...) return LibSort:Comparer("PSMFT - " .. harvestType, ...) end)
+		bag:Show(true)
+		-- Move it to the cursor
+		bag:SetAnchorPoints(0,0,0,0)	
+		bag:SetAnchorOffsets(lastX - 20, lastY - 20, (lastX + 20), (lastY + 20))	
+		-- And hide it after a second
+		self:ScheduleTimer(function() bag:Show(false) end, 1)	
+	end
+end
+
+function PSTool:HideBag()	
+	bag:Show(false)
 end
 
 function PSTool:GetEquippedTool(equippedItems)	
@@ -101,6 +158,7 @@ function PSTool:GetEquippedTool(equippedItems)
 end
 
 function PSTool:OnEnable()
-	GeminiGUI:Create(tEquipmentSetFormDef):GetInstance()
-	player = GameLib.GetPlayerUnit()
+	bag = GeminiGUI:Create(tEquipmentSetFormDef):GetInstance(PSTool)	
+	bagWindow = bag:FindChild("GatheringTool")
+	bag:Show(false)
 end
