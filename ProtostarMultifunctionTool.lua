@@ -93,6 +93,7 @@ end
 
 function PSTool:TargetChanged(name, unit)
 	if bag:IsShown() then bag:Show(false) end
+	if GameLib.GetPlayerUnit():IsInCombat() then return end
 	if not unit then return end
 	if not unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()) then return end
 	local harvestType, harvestLevel = unit:GetHarvestRequiredTradeskillName(), unit:GetHarvestRequiredTradeskillTier()
