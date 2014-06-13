@@ -38,20 +38,12 @@ require "Window"
                             Overlapped = true, 
                             IgnoreMouse = true, 
                             Picture = true, 
-                            Events = {
-                             --   GenerateTooltip = "OnGenerateTooltip",           
-                                MouseButtonUp = "MouseUpClear"                   
-                            },
                         },
                     },
                 }
 
-local GatheringTypes = {
-	[116] = "Survivalist",
-	[117] = "Relic Hunter",
-	[106] = "Mining"
-}
-
+local GatheringTypes = {}
+local GatheringNames = {}
 -----------------------------------------------------------------------------------------------
 -- ProtostarMultifunctionTool Module Definition
 -----------------------------------------------------------------------------------------------
@@ -61,11 +53,6 @@ PSTool = Apollo.GetPackage("Gemini:Addon-1.1").tPackage:NewAddon("Protostar Mult
 local GeminiGUI, glog, LibSort, bag, bagWindow 
 
 function PSTool:OnInitialize()
-	GeminiGUI = Apollo.GetPackage("Gemini:GUI-1.0").tPackage
-	self:RegisterEvent("MouseButtonDown", function(...) self:MouseDown(...) end)
-	self:RegisterEvent("TargetUnitChanged", function(...) self:TargetChanged(...) end)
-
-
 	local GeminiLogging = Apollo.GetPackage("Gemini:Logging-1.2").tPackage
   	glog = GeminiLogging:GetLogger({
         level = GeminiLogging.DEBUG,
@@ -73,18 +60,10 @@ function PSTool:OnInitialize()
         appender = "GeminiConsole"
   	})
 
-	LibSort = Apollo.GetPackage("Wob:LibSort-1.0").tPackage
 	
-	self.LibSort = LibSort
-
-	LibSort:Register("PSMFT - Survivalist", "Category", "Sort by Specific Survivalist Category", "SurvivalistCategory", function(...) return PSTool:SortCategory(116, ...) end)
-	LibSort:Register("PSMFT - Survivalist", "Level", "Sort by Level", "Level", function(...) return PSTool:SortLevel(...) end)
-	LibSort:Register("PSMFT - Relic Hunter", "Category", "Sort by Specific Relic Hunter Category", "RelicHunterCategory", function(...) return PSTool:SortCategory(117, ...) end)
-	LibSort:Register("PSMFT - Relic Hunter", "Level", "Sort by Level", "Level", function(...) return PSTool:SortLevel(...) end)
-	LibSort:Register("PSMFT - Mining", "Category", "Sort by Specific Mining Category", "MiningCategory", function(...) return PSTool:SortCategory(106, ...) end)
-	LibSort:Register("PSMFT - Mining", "Level", "Sort by Level", "Level", function(...) return PSTool:SortLevel(...) end)
+	
 end
- 
+
 function PSTool:SortCategory(cat, a, b)
 	local catA, catB = a:GetItemCategory(), b:GetItemCategory()
 	
@@ -100,27 +79,14 @@ function PSTool:SortLevel(a, b)
 	if la < lb then return -1 end
 	return 1
 end
---[[
-function PSTool:OnGenerateTooltip(wndControl, wndHandler, tType, item)
-	if wndControl ~= wndHandler then return end
-	wndControl:SetTooltipDoc(nil)
-	if item ~= nil then
-		local itemEquipped = item:GetEquippedItemForItemType()
-		Tooltip.GetItemTooltipForm(self, wndControl, item, {bPrimary = true, bSelling = false, itemCompare = itemEquipped})
-	end
-end
---]]
 
 local lastX, lastY 
 
-function PSTool:MouseDown(name, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation)
+function PSTool:MouseDown(name, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation)	
 	if eMouseButton ~= 1 then return end
 	lastX = nLastRelativeMouseX
 	lastY = nLastRelativeMouseY
-end
-
-function PSTool:MouseUpClear(wndControl, wndHandler, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation)
-	if eMouseButton == 1 then
+	if bag:IsShown() then
 		bag:Show(false)
 	end
 end
@@ -158,7 +124,35 @@ function PSTool:GetEquippedTool(equippedItems)
 end
 
 function PSTool:OnEnable()
+
+	GeminiGUI = Apollo.GetPackage("Gemini:GUI-1.0").tPackage
+	self:RegisterEvent("MouseButtonDown", function(...) self:MouseDown(...) end)
+	self:RegisterEvent("TargetUnitChanged", function(...) self:TargetChanged(...) end)
+	
 	bag = GeminiGUI:Create(tEquipmentSetFormDef):GetInstance(PSTool)	
 	bagWindow = bag:FindChild("GatheringTool")
 	bag:Show(false)
+
+	GatheringNames = { 
+		["Survivalist"] = 	CraftingLib.GetTradeskillInfo(15).strName,
+		["Relic Hunter"] = 	CraftingLib.GetTradeskillInfo(18).strName,
+		["Mining"] = 		CraftingLib.GetTradeskillInfo(13).strName,
+	}
+
+	GatheringTypes = {
+		[116] = CraftingLib.GetTradeskillInfo(15).strName, -- Survivalist
+		[117] = CraftingLib.GetTradeskillInfo(18).strName, -- Relic Hunter
+		[106] = CraftingLib.GetTradeskillInfo(13).strName, -- Mining
+	}
+
+
+	LibSort = Apollo.GetPackage("Wob:LibSort-1.0").tPackage
+	
+	LibSort:Register("PSMFT - " .. GatheringNames["Survivalist"], "Category", "Sort by Specific Survivalist Category", "SurvivalistCategory", function(...) return PSTool:SortCategory(116, ...) end)
+	LibSort:Register("PSMFT - " .. GatheringNames["Survivalist"], "Level", "Sort by Level", "Level", function(...) return PSTool:SortLevel(...) end)
+	LibSort:Register("PSMFT - " .. GatheringNames["Relic Hunter"], "Category", "Sort by Specific Relic Hunter Category", "RelicHunterCategory", function(...) return PSTool:SortCategory(117, ...) end)
+	LibSort:Register("PSMFT - " .. GatheringNames["Relic Hunter"], "Level", "Sort by Level", "Level", function(...) return PSTool:SortLevel(...) end)
+	LibSort:Register("PSMFT - " .. GatheringNames["Mining"], "Category", "Sort by Specific Mining Category", "MiningCategory", function(...) return PSTool:SortCategory(106, ...) end)
+	LibSort:Register("PSMFT - " .. GatheringNames["Mining"], "Level", "Sort by Level", "Level", function(...) return PSTool:SortLevel(...) end)
+
 end
