@@ -31,13 +31,13 @@ require "Window"
                             Sprite = "CRB_UIKitSprites:spr_baseframe", 
                             SquareSize = 100, 
                             BoxesPerRow = 1, 
-                            SwallowMouseClicks = true, 
+                            SwallowMouseClicks = false, 
                             IgnoreTooltipDelay = true, 
                             NewQuestOverlaySprite = "BK3:UI_BK3_Holo_Framing_3_Blocker", 
                             Name = "GatheringTool", 
                             Overlapped = true, 
-                            IgnoreMouse = true, 
-                            Picture = true, 
+                            IgnoreMouse = false, 
+                            Picture = true,                         
                         },
                     },
                 }
@@ -58,10 +58,7 @@ function PSTool:OnInitialize()
         level = GeminiLogging.DEBUG,
         pattern = "%d %n %c %l - %m",
         appender = "GeminiConsole"
-  	})
-
-	
-	
+  	})	
 end
 
 function PSTool:SortCategory(cat, a, b)
@@ -80,23 +77,24 @@ function PSTool:SortLevel(a, b)
 	return 1
 end
 
-local lastX, lastY 
+local lastX, lastY, lastMouse 
 
 function PSTool:MouseDown(name, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation)	
-	if eMouseButton ~= 1 then return end
+	lastMouse = eMouseButton
+	if eMouseButton ~= 1 then return end	
 	lastX = nLastRelativeMouseX
-	lastY = nLastRelativeMouseY
-	if bag:IsShown() then
-		bag:Show(false)
-	end
+	lastY = nLastRelativeMouseY	
 end
+
+local harvestType, harvestLevel
 
 function PSTool:TargetChanged(name, unit)
 	if bag:IsShown() then bag:Show(false) end
+	if lastMouse ~= 1 then return end
 	if GameLib.GetPlayerUnit():IsInCombat() then return end
 	if not unit then return end
 	if not unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()) then return end
-	local harvestType, harvestLevel = unit:GetHarvestRequiredTradeskillName(), unit:GetHarvestRequiredTradeskillTier()
+	harvestType, harvestLevel = unit:GetHarvestRequiredTradeskillName(), unit:GetHarvestRequiredTradeskillTier()
 	local tool = self:GetEquippedTool(GameLib.GetPlayerUnit():GetEquippedItems())
 	if not tool or GatheringTypes[tool:GetItemCategory()] ~= harvestType then
 		-- Lets get the correct tool for the job
@@ -111,8 +109,16 @@ function PSTool:TargetChanged(name, unit)
 	end
 end
 
+function PSTool:Equipped(name, slotNumber, itemA, itemB)
+	if not bag:IsShown() then return end
+	if GatheringTypes[itemA:GetItemCategory()] == harvestType then
+		bag:SetAnchorOffsets(-1,-1,-1,-1)
+		PSTool:HideBag()
+	end
+end
+
 function PSTool:HideBag()	
-	bag:Show(false)
+	bag:Show(false, false)
 end
 
 function PSTool:GetEquippedTool(equippedItems)	
@@ -129,6 +135,7 @@ function PSTool:OnEnable()
 	GeminiGUI = Apollo.GetPackage("Gemini:GUI-1.0").tPackage
 	self:RegisterEvent("MouseButtonDown", function(...) self:MouseDown(...) end)
 	self:RegisterEvent("TargetUnitChanged", function(...) self:TargetChanged(...) end)
+	self:RegisterEvent("PlayerEquippedItemChanged", function(...) self:Equipped(...) end)
 	
 	bag = GeminiGUI:Create(tEquipmentSetFormDef):GetInstance(PSTool)	
 	bagWindow = bag:FindChild("GatheringTool")
