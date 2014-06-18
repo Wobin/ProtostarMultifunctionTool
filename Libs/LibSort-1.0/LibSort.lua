@@ -1,5 +1,5 @@
 
-local MAJOR,MINOR = "Wob:LibSort-1.0", 2
+local MAJOR,MINOR = "Wob:LibSort-1.0", 3
 -- Get a reference to the package information if any
 local APkg = Apollo.GetPackage(MAJOR)
 -- If there was an older version loaded we need to see if this is newer
@@ -91,7 +91,7 @@ function LibSort:ProcessOrderFunction(addonName, data, tiebreaker, itemA, itemB)
 
 	local response = data.func(itemA, itemB)
 	if response == 0 and self.TiebreakerChain[addonName][data.key] then		
-		return self:ProcessOrderFunction(tiebreaker, self.TiebreakerChain[addonName][tiebreaker.key], itemA, itemB)
+		return self:ProcessOrderFunction(addonName, tiebreaker, self.TiebreakerChain[addonName][tiebreaker.key], itemA, itemB)
 	else
 		return response
 	end
