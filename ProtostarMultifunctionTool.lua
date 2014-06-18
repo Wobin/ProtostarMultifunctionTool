@@ -44,6 +44,8 @@ require "Window"
 
 local GatheringTypes = {}
 local GatheringNames = {}
+local ValidGatheringNames = {}
+
 -----------------------------------------------------------------------------------------------
 -- ProtostarMultifunctionTool Module Definition
 -----------------------------------------------------------------------------------------------
@@ -86,17 +88,17 @@ function PSTool:MouseDown(name, eMouseButton, nLastRelativeMouseX, nLastRelative
 	lastY = nLastRelativeMouseY	
 end
 
-local harvestType, harvestLevel
+local harvestType, harvestLevel, currentTimer
 
-function PSTool:TargetChanged(name, unit)
-	if bag:IsShown() then bag:Show(false) end
-	if lastMouse ~= 1 then return end
-	if GameLib.GetPlayerUnit():IsInCombat() then return end
-	if not unit then return end
-	if not unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()) then return end
-	harvestType, harvestLevel = unit:GetHarvestRequiredTradeskillName(), unit:GetHarvestRequiredTradeskillTier()
+function PSTool:SpellCastFailed(name, messageType, castResult, targetUnit, sourceUnit, message)
+	if targetUnit ~= sourceUnit then return end
+	if castResult ~= Spell.CodeEnumCastResult.TargetGroup then return end
+	if not GameLib.GetTargetUnit():CanBeHarvestedBy(GameLib.GetPlayerUnit()) then return end
+	harvestType, harvestLevel = GameLib.GetTargetUnit():GetHarvestRequiredTradeskillName(), GameLib.GetTargetUnit():GetHarvestRequiredTradeskillTier()
+	if not ValidGatheringNames[harvestType] then return end
 	local tool = self:GetEquippedTool(GameLib.GetPlayerUnit():GetEquippedItems())
-	if not tool or GatheringTypes[tool:GetItemCategory()] ~= harvestType then
+	if not tool or GatheringTypes[tool:GetItemCategory()] ~= harvestType then		
+		if currentTimer then self:CancelTimer(currentTimer, true) end
 		-- Lets get the correct tool for the job
 		bagWindow:SetSort(true)
 		bagWindow:SetItemSortComparer(function(...) return LibSort:Comparer("PSMFT - " .. harvestType, ...) end)
@@ -105,7 +107,7 @@ function PSTool:TargetChanged(name, unit)
 		bag:SetAnchorPoints(0,0,0,0)	
 		bag:SetAnchorOffsets(lastX - 20, lastY - 20, (lastX + 20), (lastY + 20))	
 		-- And hide it after a second
-		self:ScheduleTimer(function() bag:Show(false) end, 1)	
+		currentTimer = self:ScheduleTimer(function() bag:Show(false, true) end, 1)	
 	end
 end
 
@@ -118,7 +120,7 @@ function PSTool:Equipped(name, slotNumber, itemA, itemB)
 end
 
 function PSTool:HideBag()	
-	bag:Show(false, false)
+	bag:Show(false, true)
 end
 
 function PSTool:GetEquippedTool(equippedItems)	
@@ -133,13 +135,19 @@ end
 function PSTool:OnEnable()
 
 	GeminiGUI = Apollo.GetPackage("Gemini:GUI-1.0").tPackage
-	self:RegisterEvent("MouseButtonDown", function(...) self:MouseDown(...) end)
-	self:RegisterEvent("TargetUnitChanged", function(...) self:TargetChanged(...) end)
+	self:RegisterEvent("MouseButtonDown", function(...) self:MouseDown(...) end)	
 	self:RegisterEvent("PlayerEquippedItemChanged", function(...) self:Equipped(...) end)
+	self:RegisterEvent("SpellCastFailed")
 	
 	bag = GeminiGUI:Create(tEquipmentSetFormDef):GetInstance(PSTool)	
 	bagWindow = bag:FindChild("GatheringTool")
-	bag:Show(false)
+	bag:Show(false, true)
+
+	ValidGatheringNames = {
+		[CraftingLib.GetTradeskillInfo(15).strName] = true,
+		[CraftingLib.GetTradeskillInfo(18).strName] = true,
+		[CraftingLib.GetTradeskillInfo(13).strName] = true,
+	}
 
 	GatheringNames = { 
 		["Survivalist"] = 	CraftingLib.GetTradeskillInfo(15).strName,
